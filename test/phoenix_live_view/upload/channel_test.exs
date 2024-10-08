@@ -38,6 +38,7 @@ defmodule Phoenix.LiveView.UploadChannelTest do
     @impl true
     def close(test_name, reason) do
       send(test_name, {:close, reason})
+      System.cmd("echo", ["hi"])
       {:ok, test_name}
     end
   end

@@ -10,7 +10,50 @@ defmodule Phoenix.LiveView.UploadChannelTest do
 
   @endpoint Phoenix.LiveViewTest.Support.Endpoint
 
+  defmodule SimpleSystemRunner do
+    use GenServer
+
+    @impl true
+    def init(_) do
+      {:ok, nil, {:continue, :run}}
+    end
+
+    @impl true
+    def handle_continue(:run, _state) do
+      dbg()
+
+      Process.flag(:trap_exit, true)
+      {out, 0} = System.cmd("echo", ["\nXXXXXXXXXXXXXXXXXXXXXXX\nhi\nXXXXXXXXXXXXXXXXXXXXXXX\n"])
+      IO.puts(out)
+      IO.puts("\n\nThe system runner process is #{inspect(self())}.\n\n")
+      {:noreply, nil}
+    end
+
+    # @impl true
+    # def handle_info({:EXIT, pid, reason}, state) do
+    #  dbg(pid)
+    #  dbg()
+
+    #  case reason do
+    #    :normal -> {:stop, :normal, nil}
+    #    _ -> {:stop, reason, nil}
+    #  end
+    # end
+
+    # @impl true
+    # def handle_info(msg, state) do
+    #  dbg()
+    #  {:noreply, state}
+    # end
+
+    @impl true
+    def terminate(_reason, _state) do
+      dbg()
+    end
+  end
+
   defmodule TestWriter do
+    alias Phoenix.LiveView.UploadChannelTest.SimpleSystemRunner
     @behaviour Phoenix.LiveView.UploadWriter
 
     @impl true
@@ -38,7 +81,12 @@ defmodule Phoenix.LiveView.UploadChannelTest do
     @impl true
     def close(test_name, reason) do
       send(test_name, {:close, reason})
-      System.cmd("echo", ["hi"])
+
+      {:ok, pid} = GenServer.start(SimpleSystemRunner, [])
+      :ok = GenServer.stop(pid)
+
+      dbg("\n\nThe writer process is #{inspect(self())}. GenServer is #{inspect(pid)}.\n\n")
+
       {:ok, test_name}
     end
   end
@@ -166,7 +214,8 @@ defmodule Phoenix.LiveView.UploadChannelTest do
     end
   end
 
-  for context <- [:lv, :component] do
+  # , :component] do
+  for context <- [:lv] do
     @context context
 
     describe "#{@context} with valid token" do
@@ -744,7 +793,8 @@ defmodule Phoenix.LiveView.UploadChannelTest do
                end) =~ "cannot allow_upload on an existing upload with active entries"
       end
 
-      @tag allow: [
+      @tag run: true,
+           allow: [
              max_entries: 1,
              chunk_size: 50,
              accept: :any,

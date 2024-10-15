@@ -121,14 +121,20 @@ defmodule Phoenix.LiveView.UploadChannel do
   end
 
   @impl true
-  def handle_info({:EXIT, _pid, reason}, socket) do
+  def handle_info({:EXIT, pid, reason}, socket) do
+    # I do not see this in successful uploads, because System.cmd is sending the
+    # :EXIT signal on success
+    dbg("EXIT signal received: #{inspect(pid)}")
+
     {:stop, reason, socket}
+    |> dbg()
   end
 
   def handle_info(
-        {:DOWN, _, _, live_view_pid, reason},
+        {:DOWN, p, r, live_view_pid, reason},
         %{assigns: %{live_view_pid: live_view_pid}} = socket
       ) do
+    dbg([p, r, live_view_pid, reason])
     reason = if reason == :normal, do: {:shutdown, :closed}, else: reason
     {:stop, reason, maybe_cancel_writer(socket)}
   end

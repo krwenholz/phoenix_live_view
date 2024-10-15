@@ -409,11 +409,17 @@ defmodule Phoenix.LiveView.Channel do
   end
 
   def handle_call(msg, from, %{socket: socket} = state) do
+    # expected twice
+
     case socket.view.handle_call(msg, from, socket) do
       {:reply, reply, %Socket{} = new_socket} ->
         case handle_changed(state, new_socket, nil) do
-          {:noreply, new_state} -> {:reply, reply, new_state}
-          {:stop, reason, new_state} -> {:stop, reason, reply, new_state}
+          {:noreply, new_state} ->
+            {:reply, reply, new_state}
+
+          {:stop, reason, new_state} ->
+            dbg(msg, from)
+            {:stop, reason, reply, new_state} |> dbg()
         end
 
       other ->
